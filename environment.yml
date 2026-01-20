@@ -1,0 +1,35 @@
+name: seq2ribo
+channels:
+  - pytorch
+  - nvidia
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  # Python
+  - python=3.12
+  
+  # PyTorch with CUDA 11.8 (match your system's nvcc version)
+  # To check your CUDA version: nvcc --version
+  - pytorch=2.5.1
+  - pytorch-cuda=11.8
+  - torchaudio
+  - torchvision
+  
+  # Core scientific packages
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  
+  # RNA folding (ViennaRNA)
+  - viennarna>=2.6
+  
+  # ML utilities (available via conda)
+  - einops
+  - transformers
+  - pip
+
+# After creating environment, install mamba-ssm via pip:
+#   conda activate seq2ribo
+#   python -m pip install --no-build-isolation mamba-ssm causal-conv1d

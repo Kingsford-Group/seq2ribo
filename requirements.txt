@@ -1,0 +1,15 @@
+# Core dependencies (installed via conda, listed for reference)
+torch>=2.4.0
+numpy>=1.21.0
+pandas>=2.0.0
+scipy>=1.10.0
+matplotlib>=3.7.0
+einops>=0.8.0
+transformers>=4.40.0
+
+# Mamba dependencies (install via pip with --no-build-isolation)
+mamba-ssm>=2.2.0
+causal-conv1d>=1.4.0
+
+# ViennaRNA is installed via conda (bioconda channel)
+# viennarna>=2.6
