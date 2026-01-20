@@ -26,3 +26,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# User specified ignores
+envs/
+cache/
+result.json
