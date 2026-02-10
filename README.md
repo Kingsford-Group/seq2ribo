@@ -111,6 +111,7 @@ See the [LICENSE](LICENSE) file for the full terms.
 If you use seq2ribo in your research, please cite:
 
 
+```bibtex
 @article{Kaynar2026Feb,
 	author = {Kaynar, Gun and Kingsford, Carl},
 	title = {{seq2ribo: Structure-aware integration of machine learning and simulation to predict ribosome location profiles from RNA sequences}},
@@ -123,3 +124,5 @@ If you use seq2ribo in your research, please cite:
 	eprint = {2026.02.08.700508},
 	url = {https://doi.org/10.64898/2026.02.08.700508}
 }
+```
+
