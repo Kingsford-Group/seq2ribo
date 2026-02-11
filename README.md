@@ -112,17 +112,14 @@ If you use seq2ribo in your research, please cite:
 
 
 ```bibtex
-@article{Kaynar2026Feb,
-	author = {Kaynar, Gun and Kingsford, Carl},
-	title = {{seq2ribo: Structure-aware integration of machine learning and simulation to predict ribosome location profiles from RNA sequences}},
-	journal = {bioRxiv},
-	pages = {2026.02.08.700508},
+@article{kaynar2026seq2ribo,
+	title = {seq2ribo: Structure-aware integration of machine learning and
+	         simulation to predict ribosome locations profiles from {RNA}
+	         sequences},
+	author = {G{\"u}n Kaynar and Carl Kingsford},
 	year = {2026},
-	month = feb,
-	issn = {2692-8205},
-	publisher = {Cold Spring Harbor Laboratory},
-	eprint = {2026.02.08.700508},
-	url = {https://doi.org/10.64898/2026.02.08.700508}
+	journal = {bioRxiv},
+	url = {https://www.biorxiv.org/content/10.64898/2026.02.08.700508v1},
 }
 ```
 
