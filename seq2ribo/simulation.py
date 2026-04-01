@@ -53,7 +53,7 @@ def simulate_once(codons, angle_dev_sum, pair_count, init_p, rate, alpha_vec, be
                 occ[pos] = False; ribos.pop(idx); completed += 1; continue
 
             k = CODON2IDX.get(codons[pos], None)
-            if k is None: # Should not happen if data is clean
+            if k is None: 
                  occ[pos] = False; ribos.pop(idx); completed += 1; continue
 
             # angle bin index
@@ -108,7 +108,6 @@ def simulate_transcript(args):
 
     cods = [seq[i:i+3] for i in range(0, len(seq), 3)]
     
-    # Ensure angle_dev_sum and pair_count match codon length
 
     sim_vec_raw, completed_total = simulate_many(
         cods, angle_dev_sum, pair_count, init_p, rate, alpha_vec, beta_vec, bucket_vec, n_runs_tx, ANGLE_BINS
@@ -119,15 +118,7 @@ def simulate_transcript(args):
     else:
         obs_counts = np.zeros(len(cods), dtype=np.float32)
 
-    sim_sum = sim_vec_raw.sum()
-    obs_sum = obs_counts.sum()
-    
-    # Scale simulation to match observation depth if available, else just raw
-    if obs_sum > 0 and sim_sum > 0:
-        scale = obs_sum / sim_sum
-    else:
-        scale = 1.0 
-    
-    sim_vec_scaled = sim_vec_raw * scale
+    scale = 1.0
+    sim_vec_scaled = sim_vec_raw.copy()
 
     return tx, cods, obs_counts, sim_vec_raw, sim_vec_scaled, scale, completed_total
