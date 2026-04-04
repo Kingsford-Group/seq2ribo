@@ -2,7 +2,7 @@
 
 Structure-aware integration of machine learning and simulation to predict ribosome location profiles from RNA sequences.
 
-[[Read the Paper on bioRxiv]](https://www.biorxiv.org/content/10.64898/2026.02.08.700508v1)
+[[Read the Paper on bioRxiv]](https://www.biorxiv.org/content/10.64898/2026.02.08.700508v2)
 
 ## Installation
 
@@ -80,7 +80,7 @@ python scripts/run_inference.py --task te --use_utr --cell-line hek293 \
   --utr5 "AUGGCUA..." --cds "AUGGCC..." --utr3 "UAAUCG..."
 
 # Protein expression
-python scripts/run_inference.py --task protein --cell-line lcl --seq "AUGGCC..." --output protein_results.json
+python scripts/run_inference.py --task protein --cell-line lcl --seq "AUGGCC..."
 
 # sTASEP-only (no polisher), with custom simulation controls
 python scripts/run_inference.py --task riboseq --cell-line hek293 --seq "AUGGCC..." \
@@ -206,7 +206,7 @@ If you use seq2ribo in your research, please cite:
 	author = {G{\"u}n Kaynar and Carl Kingsford},
 	year = {2026},
 	journal = {bioRxiv},
-	url = {https://www.biorxiv.org/content/10.64898/2026.02.08.700508v1},
+	url = {https://www.biorxiv.org/content/10.64898/2026.02.08.700508v2},
 }
 ```
 
