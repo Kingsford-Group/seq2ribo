@@ -68,7 +68,7 @@ class PolishPKLDataset(Dataset):
             sim_vec_scaled = data[4]
 
         L = len(cods)
-        cod_ids = np.array([CODON2IDX.get(c, 64) for c in cods], dtype=np.int64) # 64 is pad, safely handle unknown
+        cod_ids = np.array([CODON2IDX.get(c, 64) for c in cods], dtype=np.int64) # 64 is pad
         sim = np.asarray(sim_vec_scaled, dtype=np.float32)
         tgt = np.asarray(obs_counts, dtype=np.float32)
 
