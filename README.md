@@ -57,16 +57,16 @@ cd notebooks
 jupyter notebook demo.ipynb
 ```
 
-`demo.ipynb` walks through every prediction task with real test-set ribo-seq data:
+`demo.ipynb` walks through every prediction task. Ribo-seq demos use real test-set transcripts; **protein expression** demos use held-out **mRFP reporter** test sequences in `notebooks/sample_data/mrfp_expr_test_samples.csv` (the training domain of the expression heads).
 
 1. **A-site profile prediction** — sTASEP-only vs sTASEP + Polisher, with ground-truth comparison and Pearson correlation
-2. **Cross-cell-line comparison** — same transcript predicted across all 4 cell lines (HEK293, LCL, RPE-1, iPSC)
+2. **Cross-cell-line comparison** — same ribo-seq transcript for profiles and TE; **protein** bars use one mRFP test CDS across all four lines
 3. **Translation efficiency (CDS-only and CDS+UTR)**
-4. **Protein expression prediction**
-5. **Synonymous codon mutation analysis** — swap Leucine codons and visualize ribosome density changes
+4. **Protein expression prediction** — mRFP test-set variants (not ribo-seq)
+5. **Synonymous codon mutation analysis** — synonymous codon swaps and profile / TE comparison
 6. **sTASEP parameter sensitivity** — effects of `init_p` and `n_stasep_runs` on simulation output
 7. **Custom sequence input** — paste your own RNA CDS and get a full prediction panel
-8. **Batch prediction from FASTA**
+8. **Batch prediction from FASTA** — example FASTA holds mRFP test CDS (expression column on-distribution)
 
 ### Google Colab Notebook
 
@@ -200,6 +200,8 @@ Protein expression inference expects per-cell checkpoints in `weights/`:
 - `ipsc_mamba_expr_full_final.pt`
 
 Protein expression inference uses fixed 32-pass MC forward averaging (mean only) to mirror finetune-time test behavior.
+
+The notebooks ship a small **held-out test** slice of the mRFP expression benchmark as `notebooks/sample_data/mrfp_expr_test_samples.csv` (full table: `reproduction/expression/mRFP_Expression.csv`).
 
 ## Project Structure
 
