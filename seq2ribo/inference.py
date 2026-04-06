@@ -180,7 +180,23 @@ class Seq2Ribo:
             print(f"Loading model for task '{task}' (Cell Line: {self.cell_line}, use_utr={te_use_utr})...")
         else:
             print(f"Loading model for task '{task}' (Cell Line: {self.cell_line})...")
-        
+
+        def _extract_model_state(raw_state):
+            if isinstance(raw_state, dict) and "state_dict" in raw_state and isinstance(raw_state["state_dict"], dict):
+                return raw_state["state_dict"]
+            if isinstance(raw_state, dict) and "model" in raw_state and isinstance(raw_state["model"], dict):
+                return raw_state["model"]
+            return raw_state
+
+        def _infer_expr_hidden_from_state(sd: Dict[str, torch.Tensor], default_hidden: int) -> int:
+            # Expected shape is [hidden, 1] for expr_head.ff.0.weight.
+            target_suffix = "expr_head.ff.0.weight"
+            for k, v in sd.items():
+                if isinstance(k, str) and k.endswith(target_suffix) and isinstance(v, torch.Tensor):
+                    if v.ndim == 2 and v.shape[1] == 1 and v.shape[0] > 0:
+                        return int(v.shape[0])
+            return int(default_hidden)
+
         ckpt_filename = "ipsc_mamba_final.pt"
         
         if task == "riboseq":
@@ -257,22 +273,8 @@ class Seq2Ribo:
                 "hek293": 128,
                 "lcl": 128,
                 "rpe": 128,
-                "ipsc": 64,
+                "ipsc": 128,
             }
-            expr_hidden = expr_hidden_map[self.cell_line]
-
-            base = RiboPolisherMamba(
-                d_model=192, 
-                n_layers=4, 
-                d_state=16,
-                d_conv=4,
-                expand=2,
-                dropout=0.1, 
-                use_mamba2=False,
-                activation="softplus"
-            )
-            model = MambaExprFull(base, hidden=expr_hidden, use_log1p=False)
-
             
         else:
             raise ValueError(f"Unknown task: {task}")
@@ -287,11 +289,23 @@ class Seq2Ribo:
 
         print(f"Loading weights from {ckpt_path}...")
         # Load weights
-        state_dict = load_state_dict_safely(ckpt_path, self.device)
-        if isinstance(state_dict, dict) and "state_dict" in state_dict and isinstance(state_dict["state_dict"], dict):
-            state_dict = state_dict["state_dict"]
-        elif isinstance(state_dict, dict) and "model" in state_dict and isinstance(state_dict["model"], dict):
-            state_dict = state_dict["model"]
+        state_dict = _extract_model_state(load_state_dict_safely(ckpt_path, self.device))
+
+        if task == "protein":
+            expr_hidden = _infer_expr_hidden_from_state(state_dict, expr_hidden_map[self.cell_line])
+            base = RiboPolisherMamba(
+                d_model=192,
+                n_layers=4,
+                d_state=16,
+                d_conv=4,
+                expand=2,
+                dropout=0.1,
+                use_mamba2=False,
+                activation="softplus"
+            )
+            model = MambaExprFull(base, hidden=expr_hidden, use_log1p=False)
+            print(f"Inferred expression head hidden size: {expr_hidden}")
+
         model.load_state_dict(state_dict, strict=True)
         model.to(self.device)
         model.eval()
