@@ -201,7 +201,7 @@ If you use seq2ribo in your research, please cite:
 ```bibtex
 @article{kaynar2026seq2ribo,
 	title = {seq2ribo: Structure-aware integration of machine learning and
-	         simulation to predict ribosome locations profiles from {RNA}
+	         simulation to predict ribosome location profiles from {RNA}
 	         sequences},
 	author = {G{\"u}n Kaynar and Carl Kingsford},
 	year = {2026},
