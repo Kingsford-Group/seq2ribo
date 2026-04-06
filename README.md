@@ -33,6 +33,8 @@ python -m pip install --no-build-isolation mamba-ssm causal-conv1d
 pip install -e .
 ```
 
+The conda environment includes **Jupyter** (`notebook`, `ipykernel`) for the tutorials in `notebooks/`. If your env is older, run `conda env update -f environment.yml --prune` after `git pull`.
+
 ### Verify Installation
 
 ```bash
@@ -41,6 +43,36 @@ python -c "import RNA; import mamba_ssm; import torch; print('All imports OK!')"
 
 > **Note**: If your CUDA version differs from 11.8, edit `pytorch-cuda=11.8` in `environment.yml` to match your system.  
 > See [INSTALL.md](INSTALL.md) for detailed troubleshooting.
+
+## Notebooks
+
+Interactive notebooks are provided in the `notebooks/` directory for exploring seq2ribo without writing code from scratch.
+
+### Local Jupyter Notebook
+
+From the repo root with `seq2ribo` activated:
+
+```bash
+cd notebooks
+jupyter notebook demo.ipynb
+```
+
+`demo.ipynb` walks through every prediction task with real test-set ribo-seq data:
+
+1. **A-site profile prediction** — sTASEP-only vs sTASEP + Polisher, with ground-truth comparison and Pearson correlation
+2. **Cross-cell-line comparison** — same transcript predicted across all 4 cell lines (HEK293, LCL, RPE-1, iPSC)
+3. **Translation efficiency (CDS-only and CDS+UTR)**
+4. **Protein expression prediction**
+5. **Synonymous codon mutation analysis** — swap Leucine codons and visualize ribosome density changes
+6. **sTASEP parameter sensitivity** — effects of `init_p` and `n_stasep_runs` on simulation output
+7. **Custom sequence input** — paste your own RNA CDS and get a full prediction panel
+8. **Batch prediction from FASTA**
+
+### Google Colab Notebook
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Kingsford-Group/seq2ribo/blob/main/notebooks/colab_seq2ribo.ipynb)
+
+`colab_seq2ribo.ipynb` includes the same demos as above plus automated environment setup on a Colab GPU runtime (installs ViennaRNA, mamba-ssm, and seq2ribo).
 
 ## Usage
 
@@ -168,34 +200,6 @@ Protein expression inference expects per-cell checkpoints in `weights/`:
 - `ipsc_mamba_expr_full_final.pt`
 
 Protein expression inference uses fixed 32-pass MC forward averaging (mean only) to mirror finetune-time test behavior.
-
-## Notebooks
-
-Interactive notebooks are provided in the `notebooks/` directory for exploring seq2ribo without writing code from scratch.
-
-### Local Jupyter Notebook
-
-```bash
-cd notebooks
-jupyter notebook demo.ipynb
-```
-
-`demo.ipynb` walks through every prediction task with real test-set ribo-seq data:
-
-1. **A-site profile prediction** — sTASEP-only vs sTASEP + Polisher, with ground-truth comparison and Pearson correlation
-2. **Cross-cell-line comparison** — same transcript predicted across all 4 cell lines (HEK293, LCL, RPE-1, iPSC)
-3. **Translation efficiency (CDS-only and CDS+UTR)**
-4. **Protein expression prediction**
-5. **Synonymous codon mutation analysis** — swap Leucine codons and visualize ribosome density changes
-6. **sTASEP parameter sensitivity** — effects of `init_p` and `n_stasep_runs` on simulation output
-7. **Custom sequence input** — paste your own RNA CDS and get a full prediction panel
-8. **Batch prediction from FASTA**
-
-### Google Colab Notebook
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Kingsford-Group/seq2ribo/blob/main/notebooks/colab_seq2ribo.ipynb)
-
-`colab_seq2ribo.ipynb` includes the same demos as above plus automated environment setup on a Colab GPU runtime (installs ViennaRNA, mamba-ssm, and seq2ribo).
 
 ## Project Structure
 

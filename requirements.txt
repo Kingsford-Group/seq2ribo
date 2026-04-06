@@ -7,6 +7,12 @@ matplotlib>=3.7.0
 einops>=0.8.0
 transformers>=4.40.0
 
+# Local Jupyter demos (also listed in environment.yml; conda install recommended)
+# Floors match a typical conda-forge resolve (e.g. notebook 7.5.5, ipykernel 7.2.0, jupyterlab 4.5.6)
+notebook>=7.5.0
+ipykernel>=7.0.0
+jupyterlab>=4.5.0
+
 # Mamba dependencies (install via pip with --no-build-isolation)
 mamba-ssm>=2.2.0
 causal-conv1d>=1.4.0

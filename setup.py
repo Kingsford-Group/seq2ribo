@@ -21,6 +21,11 @@ setup(
             "black",
             "flake8",
         ],
+        "notebooks": [
+            "notebook>=7.5.0",
+            "ipykernel>=7.0.0",
+            "jupyterlab>=4.5.0",
+        ],
     },
     python_requires=">=3.10",
     entry_points={

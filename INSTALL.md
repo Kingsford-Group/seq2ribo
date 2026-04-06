@@ -29,6 +29,15 @@ python -m pip install --no-build-isolation mamba-ssm causal-conv1d
 pip install -e .
 ```
 
+The conda environment includes **Jupyter** (`notebook`, `ipykernel`, `jupyterlab`) so you can run the demos under `notebooks/` with `jupyter notebook` or `jupyter lab`.
+
+If you created the environment before Jupyter was added, refresh it with:
+
+```bash
+conda activate seq2ribo
+conda env update -f environment.yml --prune
+```
+
 ### Option 2: Manual Installation
 
 If you have an existing environment with PyTorch + CUDA:
@@ -43,7 +52,10 @@ python -m pip install --no-build-isolation mamba-ssm causal-conv1d
 # Install other dependencies
 pip install einops transformers numpy pandas scipy matplotlib
 
-# Install seq2ribo
+# Optional: Jupyter for local notebooks/demo.ipynb
+pip install notebook ipykernel jupyterlab
+
+# Install seq2ribo (optional notebook extras: pip install -e ".[notebooks]")
 pip install -e /path/to/seq2ribo
 ```
 
