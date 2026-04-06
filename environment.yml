@@ -21,6 +21,12 @@ dependencies:
   - pandas
   - scipy
   - matplotlib
+
+  # Jupyter (local demo notebooks under notebooks/)
+  # Versions aligned with a verified conda-forge stack (linux-64, Apr 2026)
+  - notebook>=7.5
+  - ipykernel>=7.0
+  - jupyterlab>=4.5
   
   # RNA folding (ViennaRNA)
   - viennarna>=2.6
@@ -30,6 +36,7 @@ dependencies:
   - transformers
   - pip
 
-# After creating environment, install mamba-ssm via pip:
+# After creating environment, install mamba-ssm via pip (not on conda-forge):
 #   conda activate seq2ribo
 #   python -m pip install --no-build-isolation mamba-ssm causal-conv1d
+# Example resolved PyPI versions: mamba-ssm 2.3.x, causal-conv1d 1.6.x
