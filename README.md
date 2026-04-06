@@ -57,10 +57,10 @@ cd notebooks
 jupyter notebook demo.ipynb
 ```
 
-`demo.ipynb` walks through every prediction task. Ribo-seq demos use real test-set transcripts; **protein expression** demos use held-out **mRFP reporter** test sequences in `notebooks/sample_data/mrfp_expr_test_samples.csv` (the training domain of the expression heads).
+`demo.ipynb` walks through every prediction task. Ribo-seq demos use real test-set transcripts. In the **cross-cell-line panel**, protein is run on the same demo CDS for direct side-by-side comparison; dedicated protein demos use held-out **mRFP reporter** test sequences in `notebooks/sample_data/mrfp_expr_test_samples.csv` (the training domain of the expression heads).
 
 1. **A-site profile prediction** — sTASEP-only vs sTASEP + Polisher, with ground-truth comparison and Pearson correlation
-2. **Cross-cell-line comparison** — same ribo-seq transcript for profiles and TE; **protein** bars use one mRFP test CDS across all four lines
+2. **Cross-cell-line comparison** — same ribo-seq transcript for profiles, TE, and protein bars across all four lines
 3. **Translation efficiency (CDS-only and CDS+UTR)**
 4. **Protein expression prediction** — mRFP test-set variants (not ribo-seq)
 5. **Synonymous codon mutation analysis** — synonymous codon swaps and profile / TE comparison
