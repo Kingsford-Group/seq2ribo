@@ -356,6 +356,11 @@ class Seq2Ribo:
         
         for i, seq_raw in enumerate(sequence_values):
             seq = self._normalize_rna(seq_raw)
+            if len(seq) % 3 != 0:
+                raise ValueError(
+                    f"Sequence {i} has length {len(seq)} which is not divisible by 3. "
+                    "All sequences must consist of complete codons (length divisible by 3)."
+                )
             tx_id = f"seq_{i}"
             
             # Geometry check
