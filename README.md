@@ -68,6 +68,8 @@ jupyter notebook demo.ipynb
 7. **Custom sequence input** — paste your own RNA CDS and get a full prediction panel
 8. **Batch prediction from FASTA** — example FASTA holds mRFP test CDS (expression column on-distribution)
 
+**`rna_fold_features_stasep_anim.ipynb`** (methods / supplementary) walks through ViennaRNA MFE layout (`PLOT_TYPE_SIMPLE`), per-codon geometry channels (angle / pair / bucket), and illustrative **sTASEP** animations (linear tracks, wait-residual arrows, and 2D MFE layout) using a demo CDS from `demo_transcripts.pkl`. For full **ribo-seq prediction** panels (ground truth vs sTASEP vs polisher), use **`demo.ipynb`**. Paths and transcript ID are set in-notebook; run Jupyter from the repo root or from `notebooks/`.
+
 ### Google Colab Notebook
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Kingsford-Group/seq2ribo/blob/main/notebooks/colab_seq2ribo.ipynb)
