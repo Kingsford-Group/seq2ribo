@@ -104,8 +104,10 @@ class PolishPKLDataset(Dataset):
         }
 
 def pad_collate(batch):
-    batch = sorted(batch, key=lambda x: x["length"], reverse=True)
-    B, Lmax = len(batch), batch[0]["length"]
+    # Preserve the caller's order. Callers line results up with their own input
+    # list (and with the "tx" ids returned below), so reordering the batch here
+    # silently misattributes every prediction to the wrong sequence.
+    B, Lmax = len(batch), max(x["length"] for x in batch)
 
     cod = torch.full((B, Lmax), 64, dtype=torch.long)
     sim = torch.zeros((B, Lmax), dtype=torch.float32)

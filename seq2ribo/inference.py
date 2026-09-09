@@ -513,21 +513,46 @@ class Seq2Ribo:
         
         # Collect results
         preds_np = preds.cpu().numpy()
-        
-        for i, p in enumerate(preds_np):
-            # For riboseq, p is (Lmax,), we need to slice to length and handle mask
-            L = batch_data[i]["length"]
+
+        # Map each row of the batch back to the input it came from via the tx
+        # ids the collate reports, instead of assuming row i is input i. Batch
+        # rows and input positions must not be conflated: a collate that
+        # reorders (e.g. by length) would otherwise attach every prediction to
+        # the wrong sequence, and slice it to the wrong length.
+        tx_to_input_idx = {item["tx"]: j for j, item in enumerate(batch_data)}
+        if len(tx_to_input_idx) != len(batch_data):
+            raise RuntimeError("Internal error: duplicate transcript ids in batch.")
+        try:
+            row_to_input_idx = [tx_to_input_idx[tx] for tx in batch["tx"]]
+        except KeyError as e:
+            raise RuntimeError(f"Internal error: collate returned unknown transcript id {e}.")
+        if len(row_to_input_idx) != len(preds_np) or len(preds_np) != len(batch_data):
+            raise RuntimeError(
+                f"Internal error: {len(preds_np)} predictions and {len(row_to_input_idx)} "
+                f"batch rows for {len(batch_data)} inputs."
+            )
+
+        te_transform = None
+        if task == "te" and not return_scaled_te:
+            te_transform = self._load_te_transform(use_utr=use_utr)
+
+        ordered: List = [None] * len(batch_data)
+        for row, p in enumerate(preds_np):
+            j = row_to_input_idx[row]
+            # For riboseq, p is (Lmax,), we need to slice to this sequence's length
+            L = batch_data[j]["length"]
             if task == "riboseq":
                 val = p[:L] # Array of counts per codon
             elif task == "te":
                 if return_scaled_te:
                     val = float(p)
                 else:
-                    te_transform = self._load_te_transform(use_utr=use_utr)
                     val = float(self._inverse_minmax_te(np.array([p], dtype=np.float64), te_transform)[0])
             else:
                 val = float(p) # Scalar
-            results.append(val)
-            
+            ordered[j] = val
+
+        results.extend(ordered)
+
         return results
 
