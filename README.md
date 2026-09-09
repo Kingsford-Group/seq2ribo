@@ -2,7 +2,7 @@
 
 Structure-aware integration of machine learning and simulation to predict ribosome location profiles from RNA sequences.
 
-[[Read the Paper on bioRxiv]](https://www.biorxiv.org/content/10.64898/2026.02.08.700508v2)
+[[Read the Paper in Bioinformatics]](https://academic.oup.com/bioinformatics/article/42/Supplement_1/btag296/8726312)
 
 ## Installation
 
@@ -237,13 +237,15 @@ If you use seq2ribo in your research, please cite:
 
 ```bibtex
 @article{kaynar2026seq2ribo,
-	title = {seq2ribo: Structure-aware integration of machine learning and
-	         simulation to predict ribosome location profiles from {RNA}
-	         sequences},
-	author = {G{\"u}n Kaynar and Carl Kingsford},
-	year = {2026},
-	journal = {bioRxiv},
-	url = {https://www.biorxiv.org/content/10.64898/2026.02.08.700508v2},
+  title={{seq2ribo}: structure-aware integration of machine learning and simulation to predict ribosome location profiles from {RNA} sequences},
+  author={Kaynar, G{\"u}n and Kingsford, Carl},
+  journal={Bioinformatics},
+  volume={42},
+  number={Supplement\_1},
+  pages={btag296},
+  year={2026},
+  publisher={Oxford University Press},
+  doi={10.1093/bioinformatics/btag296}
 }
 ```
 
