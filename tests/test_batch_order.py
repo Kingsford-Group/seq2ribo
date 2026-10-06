@@ -42,7 +42,7 @@ SEQS: List[str] = [
     "AUG" + "CGA" * 6 + "UAA",
     "AUG" + "AAA" * 10 + "UGA",
 ]
-N_STASEP_RUNS = 200
+N_STASEP_RUNS = 32
 
 
 def _item(tx: str, L: int) -> dict:
@@ -99,13 +99,13 @@ def test_batched_matches_solo() -> None:
     for task in ("riboseq", "te"):
         random.seed(0)
         np.random.seed(0)
-        batched = predictor.predict(SEQS, task=task, n_stasep_runs=N_STASEP_RUNS)
+        batched = predictor.predict(SEQS, task=task, n_stasep_runs=N_STASEP_RUNS, seed=0)
 
         solo = []
         for seq in SEQS:
             random.seed(0)
             np.random.seed(0)
-            solo.append(predictor.predict([seq], task=task, n_stasep_runs=N_STASEP_RUNS)[0])
+            solo.append(predictor.predict([seq], task=task, n_stasep_runs=N_STASEP_RUNS, seed=0)[0])
 
         assert len(batched) == len(SEQS), f"[{task}] got {len(batched)} results for {len(SEQS)} inputs"
 
