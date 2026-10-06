@@ -65,11 +65,11 @@ class PolishPKLDataset(Dataset):
             tx = data[0]
             cods = data[1]
             obs_counts = data[2]
-            sim_vec_scaled = data[4]
+            sim_vec_raw = data[3]
 
         L = len(cods)
         cod_ids = np.array([CODON2IDX.get(c, 64) for c in cods], dtype=np.int64) # 64 is pad
-        sim = np.asarray(sim_vec_scaled, dtype=np.float32)
+        sim = np.asarray(sim_vec_raw, dtype=np.float32)  # raw simulated counts, as in training
         tgt = np.asarray(obs_counts, dtype=np.float32)
 
         sim_feat = np.log1p(sim) if self.log_input else sim

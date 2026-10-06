@@ -18,7 +18,10 @@ def main():
     parser.add_argument("--cell-line", type=str, default="ipsc", help="Cell line (e.g., ipsc, hek293, lcl, rpe)")
     parser.add_argument("--weights-dir", type=str, default=str(Path(__file__).parent.parent / "weights"), help="Directory containing model weights")
     parser.add_argument("--cache-dir", type=str, default="cache/geometry", help="Directory for geometry cache")
-    parser.add_argument("--n-stasep-runs", type=int, default=100, help="Number of sTASEP simulations per sequence")
+    parser.add_argument("--n-stasep-runs", type=int, default=100,
+                        help="Number of sTASEP simulations per sequence; each run is polished and the predictions are averaged")
+    parser.add_argument("--seed", type=int, default=None, help="Seed for the sTASEP simulations (per sequence)")
+    parser.add_argument("--batch-size", type=int, default=64, help="Model batch size (rows = sequence x run)")
     parser.add_argument("--init-p", type=float, default=0.01, help="Initiation probability for sTASEP (default: 0.01)")
     parser.add_argument("--return-scaled-te", action="store_true",
                         help="For task=te, return scaled TE in [0,1] instead of inverse-transformed TE.")
@@ -106,6 +109,8 @@ def main():
             utr5_list=utr5_list,
             cds_list=cds_list,
             utr3_list=utr3_list,
+            seed=args.seed,
+            batch_size=args.batch_size,
         )
     except Exception as e:
         print(f"Prediction failed: {e}")

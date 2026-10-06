@@ -1,6 +1,8 @@
 """Main inference API for seq2ribo predictions."""
 
 import json
+import random
+import zlib
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
@@ -11,11 +13,19 @@ from . import constants as CONST
 from .data import pad_collate
 from .geometry import compute_geometry_features
 from .models import MambaExprFull, MambaTEFull, MambaTEFullUTR, RiboPolisherMamba
-from .simulation import simulate_transcript
-from .utils import CODON2IDX, DEFAULT_ANGLE_BINS, K_ANGLE_BINS, build_full_rate, load_state_dict_safely
+from .simulation import simulate_runs
+from .utils import CODON2IDX, DEFAULT_ANGLE_BINS, K_ANGLE_BINS, load_state_dict_safely, normalized_full_rate
 
 NUC2IDX = {"A": 0, "U": 1, "G": 2, "C": 3}
 NUC_PAD_IDX = 4
+
+# Per-checkpoint head settings.
+HEAD_CONFIG = {
+    "hek293": {"te_cds_log1p": False, "te_utr_log1p": False, "expr_structure": False},
+    "lcl": {"te_cds_log1p": True, "te_utr_log1p": False, "expr_structure": False},
+    "rpe": {"te_cds_log1p": True, "te_utr_log1p": False, "expr_structure": False},
+    "ipsc": {"te_cds_log1p": True, "te_utr_log1p": False, "expr_structure": True},
+}
 
 
 
@@ -35,22 +45,22 @@ class Seq2Ribo:
         
         # Load sTASEP parameters based on cell line
         if self.cell_line == "hek293":
-            self.rates = build_full_rate(CONST.HEK293_RATES)
+            self.rates = normalized_full_rate(CONST.HEK293_RATES)
             self.alpha_vec = CONST.HEK293_ALPHA
             self.beta_vec = CONST.HEK293_BETA
             self.bucket_vec = CONST.HEK293_BUCKETS
         elif self.cell_line == "lcl":
-            self.rates = build_full_rate(CONST.LCL_RATES)
+            self.rates = normalized_full_rate(CONST.LCL_RATES)
             self.alpha_vec = CONST.LCL_ALPHA
             self.beta_vec = CONST.LCL_BETA
             self.bucket_vec = CONST.LCL_BUCKETS
         elif self.cell_line == "rpe":
-            self.rates = build_full_rate(CONST.RPE_RATES)
+            self.rates = normalized_full_rate(CONST.RPE_RATES)
             self.alpha_vec = CONST.RPE_ALPHA
             self.beta_vec = CONST.RPE_BETA
             self.bucket_vec = CONST.RPE_BUCKETS
         elif self.cell_line == "ipsc":
-            self.rates = build_full_rate(CONST.IPSC_RATES)
+            self.rates = normalized_full_rate(CONST.IPSC_RATES)
             self.alpha_vec = CONST.IPSC_ALPHA
             self.beta_vec = CONST.IPSC_BETA
             self.bucket_vec = CONST.IPSC_BUCKETS
@@ -255,10 +265,10 @@ class Seq2Ribo:
                     te_d_conv=4,
                     te_expand=2,
                     dropout=0.1,
-                    use_log1p=False,
+                    use_log1p=HEAD_CONFIG[self.cell_line]["te_utr_log1p"],
                 )
             else:
-                model = MambaTEFull(base, hidden=256)
+                model = MambaTEFull(base, hidden=256, use_log1p=HEAD_CONFIG[self.cell_line]["te_cds_log1p"])
             self._load_te_transform(use_utr=te_use_utr)
 
         elif task == "protein":
@@ -325,11 +335,17 @@ class Seq2Ribo:
         utr5_list: Optional[Union[str, List[str]]] = None,
         cds_list: Optional[Union[str, List[str]]] = None,
         utr3_list: Optional[Union[str, List[str]]] = None,
+        seed: Optional[int] = None,
+        batch_size: int = 64,
     ):
         """
         Run prediction pipeline:
-        1. sTASEP simulation (if needed to generate features)
-        2. Model forward pass (if use_polisher=True)
+        1. n_stasep_runs independent sTASEP simulations per sequence
+        2. polish every run separately (if use_polisher=True) and average the predictions
+           per sequence; with use_polisher=False the simulated counts are averaged instead
+
+        seed: if given, the simulations of each sequence are seeded from (seed, sequence), so a
+        sequence gets the same prediction whether it is predicted alone or in a batch.
         """
         if use_utr and task != "te":
             raise ValueError("use_utr=True is only supported for task='te'.")
@@ -356,18 +372,14 @@ class Seq2Ribo:
             utr3_values = None
             
         geomap = geomap or {}
-        
-        results = []
-        
-        # 1. Run sTASEP simulation for each sequence
-        # We process them to create the batch for the model
-        batch_data = []
-        
+
         if n_stasep_runs < 1:
             raise ValueError("n_stasep_runs must be >= 1.")
 
         print(f"Running sTASEP simulation for {len(sequence_values)} sequences with {n_stasep_runs} runs per sequence (init_p={init_p})...")
-        
+
+        # 1. sTASEP simulations and per-sequence model inputs
+        items = []
         for i, seq_raw in enumerate(sequence_values):
             seq = self._normalize_rna(seq_raw)
             if len(seq) % 3 != 0:
@@ -376,183 +388,93 @@ class Seq2Ribo:
                     "All sequences must consist of complete codons (length divisible by 3)."
                 )
             tx_id = f"seq_{i}"
-            
-            # Geometry check
             if tx_id in geomap:
                 angle_dev_sum, pair_count = geomap[tx_id]
             else:
-                if len(seq) % 3 == 0:
-                     angle_dev_sum, pair_count = compute_geometry_features(seq, cache_dir=self.cache_dir)
-                else:
-                     L_codons = len(seq) // 3
-                     angle_dev_sum = np.zeros(L_codons, dtype=np.float64)
-                     pair_count = np.zeros(L_codons, dtype=np.int32)
-            
-            # Run sTASEP simulation
-            
-            args = (
-                tx_id, 
-                seq, 
-                None, # a_cnts
-                None, # p_cnts
-                angle_dev_sum, 
-                pair_count,
-                self.rates,
-                self.alpha_vec,
-                self.beta_vec,
-                self.bucket_vec,
-                DEFAULT_ANGLE_BINS,
-                n_stasep_runs,
-                init_p
+                angle_dev_sum, pair_count = compute_geometry_features(seq, cache_dir=self.cache_dir)
+
+            if seed is not None:
+                random.seed(zlib.crc32(f"{seed}:{seq}".encode()))
+            cods, runs = simulate_runs(
+                seq, angle_dev_sum, pair_count, init_p, self.rates,
+                self.alpha_vec, self.beta_vec, self.bucket_vec, n_stasep_runs, DEFAULT_ANGLE_BINS,
             )
-            
-            # simulate_transcript returns:
-            # tx, cods, obs_counts, sim_vec_raw, sim_vec_scaled, scale, completed_total
-            res = simulate_transcript(args)
-            
-            _, cods, _, sim_raw, _, _, _ = res
-            sim_counts = sim_raw.astype(np.float32, copy=False)
-            if n_stasep_runs > 1:
-                sim_counts = sim_counts / float(n_stasep_runs)
-            
-            if not use_polisher:
-                results.append(sim_counts)
-                continue
-            
-            # Prepare data for pad_collate
-            # Need: cod_ids, sim_feat, angle_bin, pair_bin, bucket_idx
-            
             L = len(cods)
-            cod_ids = torch.tensor([CODON2IDX.get(c, 64) for c in cods], dtype=torch.long)
-            # Use simulation counts (averaged over runs) for all tasks.
-            # No ribo-load scaling is applied anywhere at inference time.
-            sim_feat = torch.tensor(np.log1p(sim_counts), dtype=torch.float32)
-            
-            # Geometry bins
-            kk = np.digitize(angle_dev_sum, DEFAULT_ANGLE_BINS) - 1
-            kk = np.clip(kk, 0, K_ANGLE_BINS - 1).astype(np.int64)
-            pb = np.clip(pair_count, 0, 3).astype(np.int64)
-            
-            angle_bin = torch.tensor(kk, dtype=torch.long)
-            pair_bin = torch.tensor(pb, dtype=torch.long)
-            
             bb = np.zeros(L, dtype=np.int64)
-            l1 = L // 3
-            l2 = (2 * L) // 3
-            bb[l1:l2] = 1
-            bb[l2:] = 2
-            bucket_idx = torch.tensor(bb, dtype=torch.long)
-            
+            bb[L // 3:(2 * L) // 3] = 1
+            bb[(2 * L) // 3:] = 2
             item = {
-                "tx": tx_id,
                 "length": L,
-                "cod_ids": cod_ids,
-                "sim_feat": sim_feat,
-                "angle_bin": angle_bin,
-                "pair_bin": pair_bin,
-                "bucket_idx": bucket_idx
+                "runs": runs,
+                "cod_ids": torch.tensor([CODON2IDX.get(c, 64) for c in cods], dtype=torch.long),
+                "angle_bin": torch.tensor(np.clip(np.digitize(angle_dev_sum, DEFAULT_ANGLE_BINS) - 1, 0, K_ANGLE_BINS - 1), dtype=torch.long),
+                "pair_bin": torch.tensor(np.clip(pair_count, 0, 3), dtype=torch.long),
+                "bucket_idx": torch.tensor(bb, dtype=torch.long),
             }
             if use_utr and task == "te":
-                utr5_tokens = self._tokenize_nucleotides(utr5_values[i]) if utr5_values is not None else np.array([], dtype=np.int64)
-                utr3_tokens = self._tokenize_nucleotides(utr3_values[i]) if utr3_values is not None else np.array([], dtype=np.int64)
+                utr5_tokens = self._tokenize_nucleotides(utr5_values[i])
+                utr3_tokens = self._tokenize_nucleotides(utr3_values[i])
                 item["utr5_ids"] = torch.tensor(utr5_tokens, dtype=torch.long)
                 item["utr3_ids"] = torch.tensor(utr3_tokens, dtype=torch.long)
                 item["utr5_len"] = int(len(utr5_tokens))
                 item["utr3_len"] = int(len(utr3_tokens))
-            batch_data.append(item)
+            if use_polisher and task == "protein" and not HEAD_CONFIG[self.cell_line]["expr_structure"]:
+                item["angle_bin"] = torch.zeros_like(item["angle_bin"])
+                item["pair_bin"] = torch.zeros_like(item["pair_bin"])
+            items.append(item)
 
-        # 2. Batch and Predict
-        if not batch_data:
-            return results
+        if not use_polisher:
+            return [it["runs"].mean(axis=0).astype(np.float32) for it in items]
+        if not items:
+            return []
 
-        if use_utr and task == "te":
-            batch = self._pad_collate_te_utr(batch_data)
-        else:
-            batch = pad_collate(batch_data)
-        
+        # 2. one model row per (sequence, run): each run is polished on its own, as in training
+        rows = []
+        for j, it in enumerate(items):
+            for r in range(it["runs"].shape[0]):
+                row = {k: v for k, v in it.items() if k != "runs"}
+                row["tx"] = f"seq_{j}_run_{r}"
+                row["sim_feat"] = torch.tensor(np.log1p(it["runs"][r]), dtype=torch.float32)
+                rows.append((j, row))
+
         model = self._load_model(task, use_utr=use_utr if task == "te" else None)
-        
+        te_transform = self._load_te_transform(use_utr=use_utr) if task == "te" and not return_scaled_te else None
+
+        sums = [None] * len(items)
         with torch.no_grad():
-            # Move to device
-            cod = batch["cod_ids"].to(self.device)
-            sim = batch["sim_feat"].to(self.device)
-            msk = batch["mask"].to(self.device)
-            ang = batch["angle_bin"].to(self.device)
-            pai = batch["pair_bin"].to(self.device)
-            buc = batch["bucket_idx"].to(self.device)
-            
-            # Forward
-            if task == "riboseq":
-                logits = model(cod, sim, msk, angle_bin=ang, pair_bin=pai, bucket_idx=buc)
-                preds = torch.expm1(logits)  # Convert log(counts+1) to counts
-                
-            elif task == "te":
-                if use_utr:
-                    u5 = batch["utr5_ids"].to(self.device)
-                    u3 = batch["utr3_ids"].to(self.device)
-                    u5m = batch["utr5_mask"].to(self.device)
-                    u3m = batch["utr3_mask"].to(self.device)
-                    cnts, te_preds = model(
-                        cod, sim, msk,
-                        u5, u3, u5m, u3m,
-                        angle_bin=ang, pair_bin=pai, bucket_idx=buc
-                    )
+            for start in range(0, len(rows), batch_size):
+                chunk = rows[start:start + batch_size]
+                batch_rows = [r for _, r in chunk]
+                batch = self._pad_collate_te_utr(batch_rows) if (use_utr and task == "te") else pad_collate(batch_rows)
+                if batch["tx"] != [r["tx"] for r in batch_rows]:
+                    raise RuntimeError("Internal error: collate reordered the batch.")
+                cod = batch["cod_ids"].to(self.device)
+                sim = batch["sim_feat"].to(self.device)
+                msk = batch["mask"].to(self.device)
+                kw = dict(angle_bin=batch["angle_bin"].to(self.device),
+                          pair_bin=batch["pair_bin"].to(self.device),
+                          bucket_idx=batch["bucket_idx"].to(self.device))
+                if task == "riboseq":
+                    preds = torch.expm1(model(cod, sim, msk, **kw))
+                elif task == "te" and use_utr:
+                    _, preds = model(cod, sim, msk,
+                                     batch["utr5_ids"].to(self.device), batch["utr3_ids"].to(self.device),
+                                     batch["utr5_mask"].to(self.device), batch["utr3_mask"].to(self.device), **kw)
                 else:
-                    cnts, te_preds = model(cod, sim, msk, angle_bin=ang, pair_bin=pai, bucket_idx=buc)
-                preds = te_preds # [0,1] scaled TE
-                
-            elif task == "protein":
-                # MC inference
-                mc_preds = []
-                model.train()
-                for _ in range(32):
-                    _, expr_preds = model(cod, sim, msk, angle_bin=ang, pair_bin=pai, bucket_idx=buc)
-                    mc_preds.append(expr_preds)
-                model.eval()
-                preds = torch.stack(mc_preds, dim=0).mean(dim=0)
-        
-        # Collect results
-        preds_np = preds.cpu().numpy()
+                    _, preds = model(cod, sim, msk, **kw)
+                preds = preds.cpu().numpy().astype(np.float64)
+                for (j, row), p in zip(chunk, preds):
+                    if task == "riboseq":
+                        val = p[:row["length"]]
+                    elif task == "te" and te_transform is not None:
+                        val = self._inverse_minmax_te(np.array([p], dtype=np.float64), te_transform)[0]
+                    else:
+                        val = float(p)
+                    sums[j] = val if sums[j] is None else sums[j] + val
 
-        # Map each row of the batch back to the input it came from via the tx
-        # ids the collate reports, instead of assuming row i is input i. Batch
-        # rows and input positions must not be conflated: a collate that
-        # reorders (e.g. by length) would otherwise attach every prediction to
-        # the wrong sequence, and slice it to the wrong length.
-        tx_to_input_idx = {item["tx"]: j for j, item in enumerate(batch_data)}
-        if len(tx_to_input_idx) != len(batch_data):
-            raise RuntimeError("Internal error: duplicate transcript ids in batch.")
-        try:
-            row_to_input_idx = [tx_to_input_idx[tx] for tx in batch["tx"]]
-        except KeyError as e:
-            raise RuntimeError(f"Internal error: collate returned unknown transcript id {e}.")
-        if len(row_to_input_idx) != len(preds_np) or len(preds_np) != len(batch_data):
-            raise RuntimeError(
-                f"Internal error: {len(preds_np)} predictions and {len(row_to_input_idx)} "
-                f"batch rows for {len(batch_data)} inputs."
-            )
-
-        te_transform = None
-        if task == "te" and not return_scaled_te:
-            te_transform = self._load_te_transform(use_utr=use_utr)
-
-        ordered: List = [None] * len(batch_data)
-        for row, p in enumerate(preds_np):
-            j = row_to_input_idx[row]
-            # For riboseq, p is (Lmax,), we need to slice to this sequence's length
-            L = batch_data[j]["length"]
-            if task == "riboseq":
-                val = p[:L] # Array of counts per codon
-            elif task == "te":
-                if return_scaled_te:
-                    val = float(p)
-                else:
-                    val = float(self._inverse_minmax_te(np.array([p], dtype=np.float64), te_transform)[0])
-            else:
-                val = float(p) # Scalar
-            ordered[j] = val
-
-        results.extend(ordered)
-
+        results = []
+        for j, it in enumerate(items):
+            mean = sums[j] / it["runs"].shape[0]
+            results.append(mean.astype(np.float32) if task == "riboseq" else float(mean))
         return results
 

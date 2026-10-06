@@ -88,7 +88,7 @@ predictor = Seq2Ribo(cell_line="hek293", weights_dir="weights")
 
 # Predict ribosome density
 sequence = "AUGGCCAAGCUGAAG..."
-results = predictor.predict(sequence, task="riboseq")
+results = predictor.predict(sequence, task="riboseq", n_stasep_runs=32)
 ```
 
 ### Command Line
@@ -132,8 +132,10 @@ python scripts/run_inference.py --task riboseq --cell-line hek293 --seq "AUGGCC.
 - `--cell-line`: One of `hek293`, `lcl`, `rpe`, `ipsc` (default: `ipsc`).
 - `--weights-dir`: Model checkpoint directory (default: `weights` in repo).
 - `--cache-dir`: Geometry cache directory (default: `cache/geometry`).
-- `--n-stasep-runs`: Number of sTASEP runs per sequence (default: `100`).
+- `--n-stasep-runs`: Number of sTASEP runs per sequence (default: `100`). Each run is polished separately and the predictions are averaged; with `--no-polisher` the simulated counts are averaged.
 - `--init-p`: sTASEP initiation probability (default: `0.01`).
+- `--seed`: Seed for the sTASEP simulations; each sequence is seeded from the seed and its own sequence, so results do not depend on batch composition.
+- `--batch-size`: Model batch size in rows (sequence × run, default: `64`).
 - `--return-scaled-te`: For `te`, return scaled TE in `[0,1]` instead of inverse-transformed TE.
 - `--utr5`: 5' UTR sequence (required with `--task te --use_utr`).
 - `--cds`: CDS sequence (required with `--task te --use_utr`).
@@ -147,7 +149,7 @@ python scripts/run_inference.py --task riboseq --cell-line hek293 --seq "AUGGCC.
 |------|-------------|--------|
 | `riboseq` | Ribosome profiling | Per-codon counts |
 | `te` | Translation efficiency (CDS-only or CDS+UTR) | Scalar (inverse by default; scaled with `--return-scaled-te`) |
-| `protein` | Protein expression | Scalar (fixed 32-pass MC mean) |
+| `protein` | Protein expression | Scalar |
 
 ### Supported Cell Lines
 
@@ -201,9 +203,9 @@ Protein expression inference expects per-cell checkpoints in `weights/`:
 - `rpe_mamba_expr_full_final.pt`
 - `ipsc_mamba_expr_full_final.pt`
 
-Protein expression inference uses fixed 32-pass MC forward averaging (mean only) to mirror finetune-time test behavior.
+Protein expression predictions are averaged over the polished sTASEP runs (`n_stasep_runs`), as in the finetuning test evaluation.
 
-The notebooks ship a small **held-out test** slice of the mRFP expression benchmark as `notebooks/sample_data/mrfp_expr_test_samples.csv` (full table: `reproduction/expression/mRFP_Expression.csv`).
+The notebooks ship a small **held-out test** slice of the mRFP expression benchmark as `notebooks/sample_data/mrfp_expr_test_samples.csv`.
 
 ## Project Structure
 

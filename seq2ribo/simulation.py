@@ -75,7 +75,7 @@ def simulate_once(codons, angle_dev_sum, pair_count, init_p, rate, alpha_vec, be
                 bucket = 2
 
             base_time = rate[k]
-            wait = base_time + float(alpha_vec[kk]) + float(beta_vec[b]) + float(bucket_vec[bucket])
+            wait = base_time + float(alpha_vec[b]) + float(beta_vec[kk]) + float(bucket_vec[bucket])
             eff_rate = 1.0 / max(wait, eps)
 
             if random.random() < eff_rate and ahead_clear(nxt, EXCLUSION):
@@ -99,26 +99,15 @@ def simulate_many(codons, angle_dev_sum, pair_count, init_p, rate, alpha_vec, be
     return acc, completed_total
 
 
-def simulate_transcript(args):
-    """
-    args: (tx, seq, a_cnts, p_cnts, angle_dev_sum, pair_count, rate, alpha_vec, beta_vec, bucket_vec, ANGLE_BINS)
-    """
-    (tx, seq, a_cnts, p_cnts, angle_dev_sum, pair_count, rate, alpha_vec, beta_vec, bucket_vec, ANGLE_BINS, n_runs_tx, init_p) = args
+def simulate_runs(seq, angle_dev_sum, pair_count, init_p, rate, alpha_vec, beta_vec, bucket_vec, n_runs, ANGLE_BINS):
+    """Run n_runs independent sTASEP simulations of one CDS.
 
-
+    Returns (codons, runs) where runs has shape (n_runs, n_codons) and holds the A-site
+    counts of each run separately.
+    """
     cods = [seq[i:i+3] for i in range(0, len(seq), 3)]
-    
-
-    sim_vec_raw, completed_total = simulate_many(
-        cods, angle_dev_sum, pair_count, init_p, rate, alpha_vec, beta_vec, bucket_vec, n_runs_tx, ANGLE_BINS
-    )
-    
-    if a_cnts is not None:
-        obs_counts = np.array([a_cnts[i*3:(i+1)*3].sum() for i in range(len(cods))], dtype=np.float32)
-    else:
-        obs_counts = np.zeros(len(cods), dtype=np.float32)
-
-    scale = 1.0
-    sim_vec_scaled = sim_vec_raw.copy()
-
-    return tx, cods, obs_counts, sim_vec_raw, sim_vec_scaled, scale, completed_total
+    runs = np.stack([
+        simulate_many(cods, angle_dev_sum, pair_count, init_p, rate, alpha_vec, beta_vec, bucket_vec, 1, ANGLE_BINS)[0]
+        for _ in range(n_runs)
+    ]).astype(np.float32)
+    return cods, runs

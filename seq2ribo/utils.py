@@ -31,6 +31,17 @@ def build_full_rate(rate_fit):
         rate_full[i] = 1.0 
     return rate_full
 
+def normalized_full_rate(rate_fit):
+    """Full 64-codon wait-time array with the sense-codon wait times rescaled to mean 1.
+
+    The sTASEP fits, the polisher training simulations and the downstream finetuning
+    simulations all run with this normalization.
+    """
+    rate_full = build_full_rate(rate_fit)
+    mu = np.mean(rate_full[NONSTOP_IDX])
+    rate_full[NONSTOP_IDX] = rate_full[NONSTOP_IDX] / (mu + 1e-9)
+    return rate_full
+
 def load_state_dict_safely(ckpt_path, device):
     """
     Load a checkpoint safely, handling weights_only=True/False discrepancies.

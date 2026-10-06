@@ -39,7 +39,6 @@ def test_cell_line(cell_line, task="riboseq"):
                 return_scaled_te=True,
             )
         elif task == "protein":
-            # Protein path uses fixed 32-pass MC mean inference.
             res = predictor.predict(seq, task=task)
             res_repeat = predictor.predict(seq, task=task)
         else:
