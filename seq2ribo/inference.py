@@ -22,7 +22,7 @@ NUC_PAD_IDX = 4
 # Per-checkpoint head settings.
 HEAD_CONFIG = {
     "hek293": {"te_cds_log1p": False, "te_utr_log1p": False, "expr_structure": False},
-    "lcl": {"te_cds_log1p": True, "te_utr_log1p": False, "expr_structure": False},
+    "lcl": {"te_cds_log1p": True, "te_utr_log1p": False, "expr_structure": True},
     "rpe": {"te_cds_log1p": True, "te_utr_log1p": False, "expr_structure": False},
     "ipsc": {"te_cds_log1p": True, "te_utr_log1p": False, "expr_structure": True},
 }
