@@ -1,0 +1,139 @@
+diff --git a/config/conf.yml b/config/conf.yml
+index 3e0448a..7442c2c 100644
+--- a/config/conf.yml
++++ b/config/conf.yml
+@@ -1,10 +1,10 @@
+ # Data configs
+-tx_info_path: 'data/example_training_data.txt'
+-num_workers: 4 
++tx_info_path: 'data/training.txt'
++num_workers: 16 
+ remove_extreme_txs: False
+-train_batch_size: 64
+-val_batch_size: 128
+-test_batch_size: 128
++train_batch_size: 512
++val_batch_size: 512
++test_batch_size: 512
+ max_seq_len: 12_288
+ num_targets: 1
+ # The pattern used to pick the target column(s):
+diff --git a/src/data.py b/src/data.py
+index 2b2de7e..18b486d 100644
+--- a/src/data.py
++++ b/src/data.py
+@@ -340,7 +340,7 @@ class RiboNNDataModule(pl.LightningDataModule):
+             )
+             self.df = self.df.query(
+                 "cds_utr3_len <= @config['max_cds_utr3_len']"
+-            ).reset_index(drop=True)
++            ,engine="python").reset_index(drop=True)
+         self.max_cds_utr3_len = config["max_cds_utr3_len"]
+         config["max_cds_utr3_len"] = self.max_cds_utr3_len
+ 
+diff --git a/src/main.py b/src/main.py
+index e2a6ec5..bc1df4b 100644
+--- a/src/main.py
++++ b/src/main.py
+@@ -166,7 +166,7 @@ def main(args) -> None:
+         # same test fold (as indicated by the "fold" column) are averaged 
+         # across the models. The averaged predictions by models using different
+         # test folds are then concatenated.
+-        input_file = "data/prediction_input1.txt"
++        input_file = "data/prediction_input.txt"
+         # input_file = "data/prediction_input2.txt" # Alternative input file
+         output_file = f"results/{args.species}/prediction_output.txt"
+         Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+diff --git a/src/predict.py b/src/predict.py
+index d19f127..b45c0ad 100644
+--- a/src/predict.py
++++ b/src/predict.py
+@@ -17,7 +17,7 @@ def predict_using_models_trained_in_one_fold(
+ ) -> pd.DataFrame:
+     """Make predictions averaged across top_k_models listed in mlflow run_df.
+     """
+-    # TE names
++    # ---- Determine expected output size & column names ----
+     if config['species'] == 'human':
+         training_data_columns = "TE_108T,TE_12T,TE_A2780,TE_A549,TE_BJ,TE_BRx.142,TE_C643,TE_CRL.1634,TE_Calu.3,TE_Cybrid_Cells,TE_H1.hESC,TE_H1933,TE_H9.hESC,TE_HAP.1,TE_HCC_tumor,TE_HCC_adjancent_normal,TE_HCT116,TE_HEK293,TE_HEK293T,TE_HMECs,TE_HSB2,TE_HSPCs,TE_HeLa,TE_HeLa_S3,TE_HepG2,TE_Huh.7.5,TE_Huh7,TE_K562,TE_Kidney_normal_tissue,TE_LCL,TE_LuCaP.PDX,TE_MCF10A,TE_MCF10A.ER.Src,TE_MCF7,TE_MD55A3,TE_MDA.MB.231,TE_MM1.S,TE_MOLM.13,TE_Molt.3,TE_Mutu,TE_OSCC,TE_PANC1,TE_PATU.8902,TE_PC3,TE_PC9,TE_Primary_CD4._T.cells,TE_Primary_human_bronchial_epithelial_cells,TE_RD.CCL.136,TE_RPE.1,TE_SH.SY5Y,TE_SUM159PT,TE_SW480TetOnAPC,TE_T47D,TE_THP.1,TE_U.251,TE_U.343,TE_U2392,TE_U2OS,TE_Vero_6,TE_WI38,TE_WM902B,TE_WTC.11,TE_ZR75.1,TE_cardiac_fibroblasts,TE_ccRCC,TE_early_neurons,TE_fibroblast,TE_hESC,TE_human_brain_tumor,TE_iPSC.differentiated_dopamine_neurons,TE_megakaryocytes,TE_muscle_tissue,TE_neuronal_precursor_cells,TE_neurons,TE_normal_brain_tissue,TE_normal_prostate,TE_primary_macrophages,TE_skeletal_muscle"
+     elif config['species'] == 'mouse':
+@@ -25,43 +25,46 @@ def predict_using_models_trained_in_one_fold(
+     else:
+         raise ValueError(f"Unknown species: {config['species']}")
+ 
+-    predicted_columns = training_data_columns.replace("TE_", "predicted_TE_").split(",")
++    td_cols = training_data_columns.split(",")
++    num_targets = int(config.get("num_targets", len(td_cols)))
++
++    if num_targets == len(td_cols):
++        predicted_columns = [c.replace("TE_", "predicted_TE_") for c in td_cols]
++    elif num_targets == 1:
++        tgt = config.get("target_column_pattern")
++        if isinstance(tgt, str) and tgt and tgt.startswith("TE_"):
++            predicted_columns = [f"predicted_{tgt}"]
++        else:
++            predicted_columns = ["predicted_mean_te"]
++    else:
++        predicted_columns = [f"predicted_target_{i}" for i in range(num_targets)]
+ 
+-    # Filter run_df to keep the top k models ranked by validation R2
+-    run_df = run_df.sort_values("metrics.val_r2", ascending=False).head(
+-        top_k_models_to_use
+-    )
++    # ---- Pick top-k runs in this fold and predict ----
++    run_df = run_df.sort_values("metrics.val_r2", ascending=False).head(top_k_models_to_use)
+ 
+-    # Iterate over the models to make predictions
+     predictions = []
+     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+     for run_id in run_df.run_id:
+-        # Create a new model
+         model = RiboNN(**config)
+ 
+-        # Load the state dict
+         local_state_dict_path = f"models/{config['species']}/{run_id}/state_dict.pth"
+-        model.load_state_dict(torch.load(local_state_dict_path))
+-        model.to(device)
+-        model.eval()
++        state_dict = torch.load(local_state_dict_path, map_location="cpu")
++        model.load_state_dict(state_dict)  # strict True is fine after we saved clean state_dicts
++        model.to(device).eval()
+ 
+         with torch.no_grad():
+-            batched_predictions = [model(batch.to(device)) for batch in dm.predict_dataloader()]
+-
+-        if isinstance(batched_predictions, list):
+-            batched_predictions = torch.cat(batched_predictions, dim=0)
+-
+-        predictions.append(batched_predictions.cpu().numpy())
++            batched = [model(batch.to(device)) for batch in dm.predict_dataloader()]
++        if isinstance(batched, list):
++            batched = torch.cat(batched, dim=0)
++        predictions.append(batched.cpu().numpy())
+ 
+     mean_prediction = np.stack(predictions, axis=-1).mean(axis=-1)
+-
+     df = pd.DataFrame(mean_prediction, columns=predicted_columns)
+-
+     df = pd.concat([dm.df, df], axis=1)
+-
+     return df
+ 
+ 
++
+ def predict_using_nested_cross_validation_models(
+     input_path: str,
+     species: str,
+diff --git a/src/train.py b/src/train.py
+index a5d42b1..c32ec6d 100644
+--- a/src/train.py
++++ b/src/train.py
+@@ -109,6 +109,8 @@ def train_model_nested_cv(
+                     verbose=True,
+                     monitor="val_r2",
+                     mode="max",
++                    dirpath=f"models/{experiment_name}/{test_fold}_{valid_fold}",
++                    filename="best_model"
+                 )
+ 
+                 # Start and log the child run

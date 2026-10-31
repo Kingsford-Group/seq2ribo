@@ -1,0 +1,26 @@
+diff --git a/train_all_11fold.py b/train_all_11fold.py
+index 2212a1d..a8657c4 100644
+--- a/train_all_11fold.py
++++ b/train_all_11fold.py
+@@ -30,7 +30,7 @@ from tensor_loader import TensorLoader
+ import time
+ import random
+ 
+-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
++# os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+ 
+ SEQ_LEN = 65536
+ TARGET_LEN = 1024
+@@ -64,11 +64,10 @@ class FastaStringExtractor:
+ # Correlation computation along positions from https://github.com/lucidrains/enformer-pytorch/blob/main/enformer_pytorch/metrics.py
+ class MeanPearsonCorrCoefPerChannel(Metric):
+     is_differentiable: Optional[bool] = False
+-    full_state_update:bool = False
+     higher_is_better: Optional[bool] = True
+     def __init__(self, n_channels:int, dist_sync_on_step=False):
+         """Calculates the mean pearson correlation across channels aggregated over regions"""
+-        super().__init__(dist_sync_on_step=dist_sync_on_step, full_state_update=False)
++        super().__init__(dist_sync_on_step=dist_sync_on_step)
+         self.reduce_dims=(0, 1)
+         self.add_state("product", default=torch.zeros(n_channels, dtype=torch.float32), dist_reduce_fx="sum", )
+         self.add_state("true", default=torch.zeros(n_channels, dtype=torch.float32), dist_reduce_fx="sum", )
