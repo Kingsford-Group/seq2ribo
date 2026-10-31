@@ -2,11 +2,17 @@
 
 Two model versions:
   "corrected" (default)  checkpoints of the corrected pipeline, weights/<cell>/ (see UPDATE.md)
-  "paper"                checkpoints of the published paper, weights/paper/ (release asset)
+  "paper"                checkpoints of the published paper, weights/paper/ (release asset, downloaded
+                         automatically on first use)
 """
 
 import contextlib
+import hashlib
 import json
+import os
+import tarfile
+import tempfile
+import urllib.request
 import zlib
 from pathlib import Path
 from typing import Dict, List, Optional, Union
@@ -25,6 +31,9 @@ NUC2IDX = {"A": 0, "U": 1, "G": 2, "C": 3}
 NUC_PAD_IDX = 4
 CELL_LINES = ("hek293", "lcl", "rpe", "ipsc")
 DEFAULT_WEIGHTS = Path(__file__).resolve().parents[1] / "weights"
+# published checkpoints (release asset); SEQ2RIBO_PAPER_WEIGHTS_URL overrides the URL (e.g. a local mirror)
+PAPER_WEIGHTS_URL = "https://github.com/Kingsford-Group/seq2ribo/releases/download/v0.2.0/seq2ribo-paper-weights.tar.gz"
+PAPER_WEIGHTS_SHA256 = "924a193517bfc95a75f6dbad83e2af219709a141268833502af6c20ea0ed578d"
 POLISHER = dict(d_model=192, n_layers=4, d_state=16, d_conv=4, expand=2, dropout=0.1)
 
 # published checkpoints: file names, sTASEP parameters and head settings
@@ -47,6 +56,37 @@ CORRECTED_FILES = {
     "te_cds_transform": "te_cds_transform.json",
     "te_utr_transform": "te_utr_transform.json",
 }
+
+
+def download_paper_weights(weights_dir: Optional[str] = None) -> Path:
+    """Download the published checkpoints into <weights_dir>/paper/ (once) and return that folder."""
+    root = Path(weights_dir) if weights_dir else DEFAULT_WEIGHTS
+    target = root / "paper"
+    if target.is_dir() and any(target.iterdir()):
+        return target
+    url = os.environ.get("SEQ2RIBO_PAPER_WEIGHTS_URL", PAPER_WEIGHTS_URL)
+    root.mkdir(parents=True, exist_ok=True)
+    print(f"Downloading the published checkpoints (75 MB) from {url} ...")
+    with tempfile.TemporaryDirectory(dir=root) as tmp:
+        archive = Path(tmp) / "paper.tar.gz"
+        try:
+            urllib.request.urlretrieve(url, archive)
+        except OSError as e:
+            raise RuntimeError(f"Could not download {url} ({e}). Download it manually and run "
+                               f"`tar -xzf seq2ribo-paper-weights.tar.gz -C {root}`.") from e
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        if digest != PAPER_WEIGHTS_SHA256:
+            raise RuntimeError(f"Checksum mismatch for {url}: {digest}")
+        with tarfile.open(archive) as tar:
+            members = [m for m in tar.getmembers()
+                       if m.isfile() and Path(m.name).parts[0] == "paper" and ".." not in Path(m.name).parts]
+            try:
+                tar.extractall(tmp, members=members, filter="data")
+            except TypeError:   # Python without extraction filters
+                tar.extractall(tmp, members=members)
+        Path(tmp, "paper").rename(target)
+    print(f"Published checkpoints saved to {target}")
+    return target
 
 
 def _paper_stasep(cell):
@@ -88,7 +128,10 @@ class Seq2Ribo:
             self.heads = cfg["heads"]
             self.files = {k: v for k, v in CORRECTED_FILES.items()}
         else:
-            self.weights_dir = root / "paper" if (root / "paper").is_dir() else root
+            if (root / PAPER_FILES["riboseq"].format(c=self.cell_line)).exists():
+                self.weights_dir = root          # weights_dir points at the published files themselves
+            else:
+                self.weights_dir = download_paper_weights(root)
             self.stasep = _paper_stasep(self.cell_line)
             self.default_init_p = 0.01
             self.angle_edges = DEFAULT_ANGLE_BINS

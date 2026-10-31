@@ -7,7 +7,8 @@ profiles in genomic order, see [UPDATE.md](../../UPDATE.md)). The corrected pipe
 [`../corrected`](../corrected).
 
 Run every command from the repository root. Scripts write to `reproduction/paper/results/` unless
-told otherwise. The published checkpoints (release assets) go to `weights/paper/`.
+told otherwise. The published checkpoints (release asset) go to `weights/paper/`:
+`python -c "from seq2ribo import download_paper_weights; download_paper_weights()"`.
 
 ## Requirements
 

@@ -115,9 +115,9 @@ metric (TE: within each input setting).
 
 - `weights/<cell>/`: corrected single models (polisher, TE CDS-only, TE CDS+UTR, expression), TE label
   transforms and `config.json` (fitted sTASEP parameters, angle bins, head settings).
-- Release assets: `seq2ribo-paper-weights.tar.gz` (published weights, extract into `weights/`) and
-  `seq2ribo-corrected-results.tar.gz` (every checkpoint behind the tables above, including the ensemble
-  members, the fitted TASEP/sTASEP parameters and the baseline checkpoints; extract into
-  `reproduction/corrected/`).
+- Release assets: `seq2ribo-paper-weights.tar.gz` (published weights; `version="paper"` downloads them into
+  `weights/paper/`) and `seq2ribo-corrected-results.tar.gz` (every checkpoint behind the tables above,
+  including the ensemble members, the fitted TASEP/sTASEP parameters and the baseline checkpoints; extract
+  into `reproduction/corrected/`).
 - `reproduction/paper/`: the published pipeline (minus-strand profiles as published).
 - `reproduction/corrected/`: the corrected pipeline, including RiboNN and Translatomer.

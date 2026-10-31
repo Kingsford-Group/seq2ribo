@@ -91,7 +91,7 @@ from seq2ribo import Seq2Ribo
 
 # Initialize predictor
 predictor = Seq2Ribo(cell_line="hek293")                    # corrected models (weights/hek293/)
-# predictor = Seq2Ribo(cell_line="hek293", version="paper")  # published models (weights/paper/)
+# predictor = Seq2Ribo(cell_line="hek293", version="paper")  # published models (downloaded on first use)
 
 # Predict ribosome density (one array of per-codon counts per sequence)
 sequence = "AUGGCCAAGCUGAAG..."
@@ -151,7 +151,7 @@ python scripts/run_inference.py --task riboseq --cell-line hek293 --seq "AUGGCC.
 - `--use_utr`: Enable UTR-aware TE mode (valid only with `--task te`).
 - `--cell-line`: One of `hek293`, `lcl`, `rpe`, `ipsc` (default: `ipsc`).
 - `--weights-dir`: Model checkpoint directory (default: `weights` in repo).
-- `--version`: `corrected` (default) or `paper` (published checkpoints, `weights/paper/`).
+- `--version`: `corrected` (default) or `paper` (published checkpoints, downloaded into `weights/paper/` on first use).
 - `--cache-dir`: Geometry cache directory (default: `cache/geometry`).
 - `--n-stasep-runs`: Number of sTASEP runs per sequence (default: `100`). Each run is polished separately and the predictions are averaged; with `--no-polisher` the simulated counts are averaged.
 - `--init-p`: sTASEP initiation probability (default: the value used for training, `0.01`).
@@ -188,8 +188,10 @@ python scripts/run_inference.py --task riboseq --cell-line hek293 --seq "AUGGCC.
   `te_utr.pt` + `te_utr_transform.json` (TE, CDS+UTR), `expression.pt` (protein expression)
 - `config.json`: fitted sTASEP parameters, angle-bin edges and head settings
 
-The published checkpoints are a release asset: `tar -xzf seq2ribo-paper-weights.tar.gz -C weights` creates
-`weights/paper/`, used with `version="paper"`.
+The published checkpoints are a [release asset](https://github.com/Kingsford-Group/seq2ribo/releases/tag/v0.2.0) (75 MB). `version="paper"` downloads them into
+`weights/paper/` on first use (checksum verified); `from seq2ribo import download_paper_weights;
+download_paper_weights()` does the same, and `tar -xzf seq2ribo-paper-weights.tar.gz -C weights` installs a
+manually downloaded copy.
 For `task="te"`, output is inverse-transformed TE by default (`--return-scaled-te` returns the scaled value in
 `[0,1]`). For TE+UTR, pass the parts separately (`utr5_list`, `cds_list`, `utr3_list` in Python; `--utr5`, `--cds`,
 `--utr3` on the command line). Predictions are averaged over the

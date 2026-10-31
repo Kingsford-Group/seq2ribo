@@ -57,6 +57,6 @@ outputs of the previous steps of the same cell line only, so cell lines can run 
 - `results/baselines/{ribonn,translatomer}/`: baseline models and metrics.
 - `results/eval/results_tables.md`: the tables of UPDATE.md.
 
-The release asset `seq2ribo-corrected-results.tar.gz` holds these outputs for the released runs
+The [release asset](https://github.com/Kingsford-Group/seq2ribo/releases/tag/v0.2.0) `seq2ribo-corrected-results.tar.gz` holds these outputs for the released runs
 (`tar -xzf seq2ribo-corrected-results.tar.gz -C reproduction/corrected`); step 9 then rebuilds the
 tables without retraining.

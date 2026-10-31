@@ -38,7 +38,7 @@ def main(argv=None):
     parser.add_argument("--weights-dir", type=str, default=None,
                         help="Directory containing model weights (default: the repository's weights/)")
     parser.add_argument("--version", type=str, choices=["corrected", "paper"], default="corrected",
-                        help="Model version: corrected (default) or paper (published checkpoints in weights/paper/)")
+                        help="Model version: corrected (default) or paper (published checkpoints, downloaded into weights/paper/ on first use)")
     parser.add_argument("--cache-dir", type=str, default="cache/geometry", help="Directory for geometry cache")
     parser.add_argument("--n-stasep-runs", type=int, default=100,
                         help="Number of sTASEP simulations per sequence; each run is polished and the predictions are averaged")
