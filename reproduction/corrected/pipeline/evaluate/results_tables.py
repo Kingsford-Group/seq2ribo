@@ -89,16 +89,20 @@ def ribonn(setting, mode, cell):
 
 
 def translatomer(cell, name):
-    r = json.load(open(R / "baselines" / "translatomer" / cell / name))["translatomer"]["pearson_r"]
-    return None if r is None or math.isnan(r) else r
+    """Pearson r, or a note when r is undefined (all predictions equal)."""
+    m = json.load(open(R / "baselines" / "translatomer" / cell / name))["translatomer"]
+    r = m["pearson_r"]
+    if r is None or math.isnan(r):
+        return "all zeros" if m.get("constant_predictions") and m.get("pred_mean") == 0 else "-"
+    return r
 
 
 def row(label, values, spec, best, paper=None):
-    """Markdown row; None -> '-' (constant predictions); best value(s) in bold; paper values as 'paper -> '."""
-    ok = [v for v in values if v is not None]
+    """Markdown row; notes (str) as given; best value(s) in bold; paper values as 'paper -> '."""
+    ok = [v for v in values if v is not None and not isinstance(v, str)]
     b = best(ok) if ok else None
-    cells = ["-" if v is None else (f"**{v:{spec}}**" if f"{v:{spec}}" == f"{b:{spec}}" else f"{v:{spec}}")
-             for v in values]
+    cells = [v if isinstance(v, str) else "-" if v is None else
+             (f"**{v:{spec}}**" if f"{v:{spec}}" == f"{b:{spec}}" else f"{v:{spec}}") for v in values]
     if paper is not None:
         cells = [c if p is None else f"{p:{spec}} → {c}" for p, c in zip(paper, cells)]
     return "| " + " | ".join(label + cells) + " |"

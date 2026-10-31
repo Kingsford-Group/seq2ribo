@@ -39,7 +39,7 @@ scaling (lower is better). TE and
 expression: Pearson r per transcript, with the prediction averaged over the simulation runs of a transcript.
 Single model: the seed with the lowest validation MSE; ensemble: mean prediction of the seeds. Cells read
 paper → corrected; the paper reports no ensembles. Bold marks the best corrected value per cell line and
-metric (TE: within each input setting); "-" marks constant predictions (correlation undefined).
+metric (TE: within each input setting).
 
 **Ribosome profiles**
 
@@ -107,7 +107,7 @@ metric (TE: within each input setting); "-" marks constant predictions (correlat
 | Cell line | Translatomer (seq.) | seq2ribo | seq2ribo, ensemble |
 |---|---|---|---|
 | iPSC | 0.052 → -0.007 | 0.903 → 0.888 | **0.906** |
-| HEK293 | 0.000 → - | 0.883 → 0.895 | **0.919** |
+| HEK293 | 0.000 → all zeros | 0.883 → 0.895 | **0.919** |
 | LCL | 0.261 → 0.062 | 0.873 → 0.860 | **0.878** |
 | RPE-1 | 0.027 → 0.114 | 0.830 → **0.900** | 0.889 |
 
