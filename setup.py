@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="seq2ribo",
-    version="0.1.0",
+    version="0.2.0",
     description="Structure-aware integration of machine learning and simulation to predict ribosome location profiles from RNA sequences",
     author="gkaynar",
     packages=find_packages(),
@@ -30,7 +30,7 @@ setup(
     python_requires=">=3.10",
     entry_points={
         "console_scripts": [
-            "seq2ribo=scripts.run_inference:main",
+            "seq2ribo=seq2ribo.cli:main",
         ],
     },
 )

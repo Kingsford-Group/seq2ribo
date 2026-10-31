@@ -84,7 +84,7 @@ def test_pad_collate_preserves_order() -> None:
 
 def test_batched_matches_solo() -> None:
     """Predicting a list must give each sequence the same answer as alone."""
-    if not WEIGHTS_DIR.is_dir() or not any(WEIGHTS_DIR.glob("*.pt")):
+    if not (WEIGHTS_DIR / "hek293" / "config.json").exists():
         print(f"SKIP: no weights in {WEIGHTS_DIR}")
         return
 

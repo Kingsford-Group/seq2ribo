@@ -13,7 +13,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/seq2ribo.git
+git clone https://github.com/Kingsford-Group/seq2ribo.git
 cd seq2ribo
 
 # Create conda environment

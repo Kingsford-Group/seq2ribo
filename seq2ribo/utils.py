@@ -1,7 +1,6 @@
 """Utility constants and functions for seq2ribo."""
 
 import numpy as np
-import torch
 
 CODONS = [
     "AAA","AAC","AAG","AAU","ACA","ACC","ACG","ACU","AGA","AGC","AGG","AGU",
@@ -46,6 +45,7 @@ def load_state_dict_safely(ckpt_path, device):
     """
     Load a checkpoint safely, handling weights_only=True/False discrepancies.
     """
+    import torch
     try:
         sd = torch.load(str(ckpt_path), map_location=device, weights_only=True)
     except TypeError:
