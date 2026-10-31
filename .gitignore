@@ -31,3 +31,13 @@ venv.bak/
 envs/
 cache/
 result.json
+
+# extracted release assets, downloaded inputs and pipeline outputs
+weights/paper/
+reproduction/corrected/data/
+reproduction/corrected/results/
+reproduction/corrected/logs/
+reproduction/paper/data/
+reproduction/paper/results/
+reproduction/paper/TE/*.xlsx
+reproduction/paper/expression/*.csv
